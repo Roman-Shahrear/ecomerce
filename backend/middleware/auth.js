@@ -13,7 +13,7 @@ exports.isAuthenticatedUser = catchAsyncErrors(async (req, res, next) => {
     try {
         const decodeData = jwt.verify(token, process.env.JWT_SECRET);
         
-        const userId = decodeData.id; // Updated to use 'id' property
+        const userId = decodeData.id; // Updated to use 'id' property or decoded token need to store in a variable for use it
 
         req.user = await User.findOne({ _id: userId });
 
@@ -31,7 +31,7 @@ exports.isAuthenticatedUser = catchAsyncErrors(async (req, res, next) => {
 
 exports.authorizeRoles = (...roles) => {
     return (req, res, next) => {
-        try {
+    try {
             if (!req.user || !req.user.role) {
                 return next(
                     new ErrorHandler(
@@ -54,6 +54,6 @@ exports.authorizeRoles = (...roles) => {
         } catch (error) {
             // Handle any synchronous errors here
             next(error);
-        }
+        };
     };
 };
