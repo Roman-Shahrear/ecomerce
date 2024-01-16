@@ -3,8 +3,9 @@ const catchAsyncErrors = require("../middleware/catchAsyncErrors");
 const User = require("../models/userModel");
 const sendToken = require("../utils/jwtToken");
 const sendEmail = require("../utils/sendEmail");
-//For Register a User
+const crypto = require("crypto");
 
+//For Register a User
 exports.registerUser = catchAsyncErrors(async(req, res, next)=>{
     
     const {name, email, password} = req.body;
@@ -103,4 +104,35 @@ exports.forgotPassword = catchAsyncErrors(async(req, res, next)=> {
 
             return next(new ErrorHandler(error.message, 500));
         }
+    });
+
+
+    // Reset Password
+    exports.resetPassword = catchAsyncErrors(async(req, res, next)=>{
+        //creating token hash
+        const resetPasswordToken = crypto
+        .createHash('sha256')
+        .update(req.params.token)
+        .digest("hex");
+
+        const user = await User.findOne({
+            resetPasswordToken, // resetPasswordToken: resetPasswordToken if you want you type this and also work because of object we need to write
+            resetPasswordExpire: {$gt: Date.now()}
+        });
+
+        if(!user){
+            return next(new ErrorHandler("Reset password token is invalid or has been expired", 400));
+        }
+
+        if(req.body.password !== req.body.confirmPassword){
+            return next(new ErrorHandler("Password doesn't match", 400));
+        }
+
+        user.password = req.body.password;
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpire = undefined;
+
+        await user.save();
+
+        sendToken(user, 200, res);
     });
