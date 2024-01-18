@@ -74,3 +74,65 @@ exports.deleteProduct = catchAsyncErrors(async (req, res, next) => {
     message: "Product deleted successfully",
   });
 });
+
+// Create New Review And Update Review
+exports.createProductReview = catchAsyncErrors(async (req, res, next) => {
+  const { rating, comment, productId } = req.body;
+  // Ensure User is Authenticated
+  if (!req.user || !req.user._id) {
+    return next(new ErrorHandler("User not authenticated", 401));
+  }
+  const review = {
+    user: req.user._id,
+    name: req.user.name,
+    rating: Number(rating),
+    comment
+  };
+
+  const product = await Product.findById(productId);
+
+  if (!product) {
+    return next(new ErrorHandler("Product not found", 404));
+  }
+
+  const existingReviewIndex = product.reviews.findIndex(
+    (rev) => rev.user && rev.user.toString() === req.user._id.toString()
+  );
+
+  if (existingReviewIndex !== -1) {
+    // Update the existing review
+    product.reviews[existingReviewIndex].rating = Number(rating);
+    product.reviews[existingReviewIndex].comment = comment;
+  } else {
+    // Add a new review
+    product.reviews.push(review);
+    product.numberOfReviews = product.reviews.length;
+  }
+
+  // Recalculate the average rating
+  let totalRating = 0;
+  product.reviews.forEach((rev) => {
+    totalRating += rev.rating;
+  });
+  product.ratings = totalRating / product.reviews.length;
+
+  await product.save({ validateBeforeSave: false });
+
+  res.status(200).json({
+    success: true,
+  });
+});
+
+
+// Get All Reviews Of a Product
+exports.getProductReviews = catchAsyncErrors(async(req, res, next)=>{
+  const product = await Product.findById(req.query.id);
+
+  if(!product){
+    return next(new ErrorHandler("product not found", 404));
+  }
+
+  res.status(200).json({
+    success: true,
+  })
+});
