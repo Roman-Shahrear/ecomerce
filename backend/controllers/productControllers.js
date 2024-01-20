@@ -134,5 +134,48 @@ exports.getProductReviews = catchAsyncErrors(async(req, res, next)=>{
 
   res.status(200).json({
     success: true,
+    reviews: product.reviews
   })
 });
+
+
+// delete review
+exports.deleteReview = catchAsyncErrors(async(req, res, next)=>{
+
+  const product = await Product.findById(req.query.productId);
+
+  if(!product){
+    return next(new ErrorHandler("product not found", 404));
+  }
+
+  const reviews = product.reviews.filter(
+    (rev)=> rev._id.toString() !== req.query.id.toString()
+    );
+  
+  // Recalculate the average rating
+  let totalRating = 0;
+  reviews.forEach((rev) => {
+    totalRating += rev.rating;
+  });
+
+const ratings = totalRating / reviews.length;
+const numberOfReviews = reviews.length;
+
+await Product.findByIdAndUpdate(req.query.productId, {
+  reviews,
+  ratings,
+  numberOfReviews
+},{
+  new: true,
+  runValidators: true,
+  useFindAndModify: false
+});
+
+res.status(200).json({
+    success: true,
+  })
+});
+
+
+
+
