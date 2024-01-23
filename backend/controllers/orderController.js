@@ -84,7 +84,10 @@ exports.updateOrder = catchAsyncErrors(async(req, res, next)=>{
     }
 
     if(order.orderStatus === "Delivered"){
-        return next(new ErrorHandler("You have already delivered this product", 404));
+        return res.status(200).json({
+            success: false,
+            message: "Order is already delivered"
+        });
     }
 
     for (const orderItem of order.orderItems){
@@ -112,29 +115,19 @@ async function updateStock(productId, quantity){
         throw new ErrorHandler("Product not found", 404);
     }
 
-    product.stock -= quantity;
+    product.Stock -= quantity;
     await product.save({validateBeforeSave: false})
 };
 
 // Delete Order --Admin
 exports.deleteOrder = catchAsyncErrors(async (req, res, next) => {
-    try {
-        const orderExists = await Order.exists({ _id: req.params.id });
-
-        if (!orderExists) {
-            return next(new ErrorHandler("Order not found with this id", 404));
-        }
-
-        const order = await Order.findByIdAndDelete(req.params.id);
-        console.log("Result of findByIdAndDelete:", order);
-
-        res.status(200).json({
-            success: true,
-        });
-    } catch (error) {
-        console.error("Error deleting order:", error);
-        return next(new ErrorHandler("Error deleting the order", 500));
+    const order = await Order.findByIdAndDelete(req.params.id);
+    if (!order) {
+      return next(new ErrorHandler("Product not found", 404));
     }
-});
-
+    res.status(200).json({
+      success: true,
+      message: "Order deleted successfully",
+    });
+  });
 
